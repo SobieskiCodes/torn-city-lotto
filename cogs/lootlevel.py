@@ -35,7 +35,7 @@ class lootLevel(commands.Cog):
             if self.status:
                 await self.bot.change_presence(status=discord.Status.online, activity=discord.Activity(type=3, name=f"{' | '.join(self.status)}"))
             else:
-                await self.bot.change_presence(status=discord.Status.idle, activity=discord.Activity(type=3, name=f"$ll <name> | $ll"))
+                await self.bot.change_presence(status=discord.Status.idle, activity=discord.Activity(type=3, name=f"https://www.probsjust.in/"))
             self.status = []
             await asyncio.sleep(time)
 

@@ -9,7 +9,7 @@ from cogs.util.errorhandling import NotAuthorized, SlyBastard, NotAdded, TempBan
 
 async def get_prefix(bot, message):
     if message.guild:
-        fetch = await bot.db.execute(f'SELECT Prefix FROM Guild WHERE GuildID={message.guild.id}')
+        fetch = await bot.db.execute(f'SELECT Prefix FROM Guild WHERE GuildID=?', (message.guild.id, ))
         result = await fetch.fetchone()
         if not result:
             prefix = '$'
@@ -26,7 +26,7 @@ bot = commands.AutoShardedBot(command_prefix=get_prefix, pm_help=True)
 
 @bot.event
 async def on_guild_join(guild):
-    get_guild = await bot.db.execute(f'SELECT GuildID FROM Guild WHERE GuildID={guild.id}')
+    get_guild = await bot.db.execute(f'SELECT GuildID FROM Guild WHERE GuildID=?', (guild.id, ))
     results = await get_guild.fetchone()
     if not results:
         await bot.db.execute(f"INSERT INTO Guild(GuildID, Prefix, LottosRun, ItemValues, CashValues) VALUES (?, ?)", (guild.id, '$', 0, 0, 0))
@@ -160,13 +160,13 @@ class Fetch:
     def __init__(self, bot):
         self.bot = bot
 
-    async def all(self, arg):
-        get = await self.bot.db.execute(arg)
+    async def all(self, *arg):
+        get = await self.bot.db.execute(*arg)
         results = await get.fetchall()
         return results
 
-    async def one(self, arg):
-        get = await self.bot.db.execute(arg)
+    async def one(self, *arg):
+        get = await self.bot.db.execute(*arg)
         results = await get.fetchone()
         return results
 

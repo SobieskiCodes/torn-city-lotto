@@ -1,0 +1,2 @@
+# torn city lotto
+ fullbot

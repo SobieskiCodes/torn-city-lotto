@@ -1,0 +1,6 @@
+{
+    "config": {
+        "token": "discord token",
+        "torn_token": "torn api key"
+    }
+}

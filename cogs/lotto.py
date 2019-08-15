@@ -6,6 +6,7 @@ from cogs.util.errorhandling import SlyBastard, NotAuthorized
 import re
 from datetime import datetime
 from cogs.util.checks import has_id_added, temp_ban, is_guild_owner, is_mod
+import jthon
 
 
 class Lotto:
@@ -50,6 +51,21 @@ class Lottery(commands.Cog):
         self.bot.itemdict = {}
         self.bot.fullitems = {}
         self.bot.addedids = []
+        self.bot.propdict = jthon.load('./cogs/util/data/propertydict').get('properties')
+
+    async def cog_check(self, ctx):
+        for guild in ctx.bot.guildconfigs:
+            if guild.guildid == ctx.guild.id:
+                guildconfigobject = list(ctx.bot.guildconfigs).index(guild)
+                guild_ob = ctx.bot.guildconfigs[guildconfigobject]
+                if guild_ob.lottochan:
+                    channel = ctx.bot.get_channel(guild_ob.lottochan)
+                    if ctx.message.channel == channel:
+                        return True
+                    if not ctx.message.channel == channel:
+                        return False
+                if not guild_ob.lottochan:
+                    return True
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -150,7 +166,7 @@ class Lottery(commands.Cog):
         list_bot_commands = [f'{the_prefix}{x}' for x in self.bot.bot_commands]
         get_lotto_object = await Lottery.get_running_lottos(self, message.guild.id)
         if message.author.id != self.bot.user.id:
-            if get_lotto_object and message.content not in list_bot_commands and not message.content.startswith(f'{the_prefix}sl'):
+            if get_lotto_object and message.content not in list_bot_commands and not message.content.startswith(f'{the_prefix}sl') and not message.content.startswith(f'{the_prefix}startlotto'):
                 if message.channel.id == get_lotto_object.chanid:
                     get_message_id = get_lotto_object.messageid
                     get_the_message = await message.channel.fetch_message(get_message_id)
@@ -302,7 +318,6 @@ class Lottery(commands.Cog):
                         e.set_footer(text=f"Event time")
                         e.set_thumbnail(url=f"{ctx.author.avatar_url}")
                         await channel.send(embed=e)
-                        self.bot.running_lottos.remove(get_lotto_object)
                 await asyncio.sleep(2)
             if 'days' not in activity:
                 break
@@ -320,11 +335,12 @@ class Lottery(commands.Cog):
         get_guild_object = await Lottery.get_guild_object(self, ctx.message.guild.id)
         get_guild_object.sentline = False
         get_guild_object.runninglotto = False
+        self.bot.running_lottos.remove(get_lotto_object)
         time = datetime.now() - get_lotto_object.starttime
-        #self.bot.running_lottos.remove(get_lotto_object) #----------------------------------------------------------------------------------------------------------
         get_guild_object.sentlineauthor = ctx.author
-        regex = r"^(?:you sent) (?:[a-z]+)?([0-9]+[a-z]{1}|\$[0-9,]+)?\ ?([0-9a-z\-,+: ]+?)? (?:to)(?:.*)"
-
+        #oldregex = r"^(?:you sent) (?:[a-z]+)?([0-9]+[a-z]{1}|\$[0-9,]+)?\ ?([0-9a-z\-,+: ]+?)? (?:to)(?:.*)"
+        propregex = "^(?:you have given your) ([a-z- ]+) (?:to)(?:.*)"
+        regex = "^(?:you sent|you have given) (?:[a-z]+)?([0-9]+[a-z]{1}|\$[0-9,]+)?\ ?([0-9a-z\-,+: ]+?)? (?:to(?:.*))"
         def sent_check(m):
             matches = re.search(regex, m.content, re.IGNORECASE)
             return m.author is ctx.author and matches
@@ -348,14 +364,19 @@ class Lottery(commands.Cog):
             get_item = self.bot.itemdict.get(prize_name)
             item_info = self.bot.fullitems.get('items').get(get_item)
             price = f"{item_info.get('market_value')}"
+        if prize_name not in list(self.bot.itemdict.keys()):
+            for property in self.bot.propdict:
+                if self.bot.propdict.get(property).get('name').data == prize_name:
+                    get_price = self.bot.propdict.get(property).get('cost').data
+                    price = round(get_price * 0.75)
 
         if price:
             value = price if len(prize) != 2 else (int(price) * int(prize[0]))
-            type = 1
+            the_type = 1
         if not price:
             if prize_name.startswith('$'):
                 value = int(''.join(filter(str.isdigit, prize_name)))
-                type = 0
+                the_type = 0
             else:
                 value = 0
         if sent_line:
@@ -370,27 +391,27 @@ class Lottery(commands.Cog):
                 user_cash = await self.bot.fetch.one(f'SELECT CashValues FROM Totals WHERE DiscordID=? AND GuildID=?', (ctx.author.id, ctx.guild.id))
                 user_items = await self.bot.fetch.one(f'SELECT ItemValues FROM Totals WHERE DiscordID=? AND GuildID=?', (ctx.author.id, ctx.guild.id))
                 await self.bot.db.execute(f"UPDATE Totals SET LottosRun=? WHERE GuildID=? AND DiscordID=?", (user_lottos[0] + 1, ctx.message.guild.id, ctx.author.id))
-                if type == 0:
+                if the_type == 0:
                     await self.bot.db.execute(
                         f"UPDATE Totals SET CashValues=? WHERE GuildID=? AND DiscordID=?", (user_cash[0] + int(value), ctx.message.guild.id, ctx.author.id))
-                if type == 1:
+                if the_type == 1:
                     await self.bot.db.execute(
                         f"UPDATE Totals SET ItemValues=? WHERE GuildID=? AND DiscordID=?", (user_items[0] + int(value), ctx.message.guild.id, ctx.author.id))
 
             if not get_user:
                 await self.bot.db.execute(f"INSERT INTO Totals(GuildID, DiscordID, TornID, LottosRun, ItemValues, CashValues) VALUES"
                                           f" (?, ?, ?, ?, ?, ?)", (ctx.guild.id, ctx.author.id, torn_id[0], 1, 0, 0))
-                if type == 0:
+                if the_type == 0:
                     await self.bot.db.execute(
                         f"UPDATE Totals SET CashValues=? WHERE GuildID=? AND DiscordID=?", (int(value), ctx.message.guild.id, ctx.author.id))
-                if type == 1:
+                if the_type == 1:
                     await self.bot.db.execute(
                         f"UPDATE Totals SET ItemValues=? WHERE GuildID=? AND DiscordID=?", (int(value), ctx.message.guild.id, ctx.author.id))
 
             await self.bot.db.execute(f"UPDATE Guild SET LottosRun=? WHERE GuildID=?", (get_current_lottos[0] + 1, ctx.message.guild.id))
-            if type == 0:
+            if the_type == 0:
                 await self.bot.db.execute(f"UPDATE Guild SET CashValues=? WHERE GuildID=?", (get_current_cashvalues[0] + int(value), ctx.message.guild.id))
-            if type == 1:
+            if the_type == 1:
                 await self.bot.db.execute(f"UPDATE Guild SET ItemValues=? WHERE GuildID=?", (get_current_itemvalues[0] + int(value), ctx.message.guild.id))
             await self.bot.db.commit()
             get_guild_object.sentline = True
@@ -425,7 +446,6 @@ class Lottery(commands.Cog):
             e.set_footer(text=f"Total value of prize: ${pretty_value[:-3]}")
             e.set_thumbnail(url=f"{ctx.guild.icon_url}")
             await get_the_message.edit(embed=e)
-            self.bot.running_lottos.remove(get_lotto_object)
             if get_guild_object.logchannel:
                 channel = self.bot.get_channel(get_guild_object.logchannel)
                 e = discord.Embed(
@@ -637,160 +657,6 @@ class Lottery(commands.Cog):
                     description=f"<:no:609076414469373971> {ctx.author.name}, please provide only a single mention!")
                 await ctx.send(embed=e)
 
-    @commands.group()
-    @is_guild_owner()
-    async def config(self, ctx):
-        """Guild owner only, configuration setup"""
-        if ctx.invoked_subcommand is None:
-            e = discord.Embed(colour=discord.Colour(0xbf2003),
-                              description=f"<:no:609076414469373971> {ctx.author.name}, not a valid command.")
-            await ctx.send(embed=e)
-
-    @is_guild_owner()
-    @config.command()
-    async def bannedrole(self, ctx, role: str = None):
-        """The role you would like to add to the banned from lottos list, $config bannedrole <@role>"""
-        if not role or not ctx.message.role_mentions:
-            e = discord.Embed(colour=discord.Colour(0xbf2003),
-                              description=f"<:no:609076414469373971> {ctx.author.name}, please provide a role to set!")
-            await ctx.send(embed=e)
-            return
-        if ctx.message.role_mentions:
-            if len(ctx.message.role_mentions) == 1:
-                the_role = ctx.message.role_mentions[0]
-                await self.bot.db.execute(
-                    f"UPDATE Guild SET BannedID=? WHERE GuildID=", (the_role.id, ctx.message.guild.id))
-                await self.bot.db.commit()
-                get_guild_object = await Lottery.get_guild_object(self, ctx.message.guild.id)
-                get_guild_object.bannedid = the_role.id
-                e = discord.Embed(colour=discord.Colour(0x03bd33),
-                    description=f"<:tickYes:315009125694177281> Banned role has been updated to {the_role.name}")
-                await ctx.send(embed=e)
-
-            else:
-                e = discord.Embed(colour=discord.Colour(0xbf2003),
-                        description=f"<:no:609076414469373971> {ctx.author.name}, please provide only a single role!")
-                await ctx.send(embed=e)
-
-    @is_guild_owner()
-    @config.command()
-    async def logchan(self, ctx, chan: str = None):
-        """The channel you would like to use for logging, $config logchan <#channel>"""
-        if not chan or not ctx.message.channel_mentions:
-            e = discord.Embed(colour=discord.Colour(0xbf2003),
-                            description=f"<:no:609076414469373971> {ctx.author.name}, please provide a channel to set!")
-            await ctx.send(embed=e)
-            return
-        if ctx.message.channel_mentions:
-            if len(ctx.message.channel_mentions) == 1:
-                the_chan = ctx.message.channel_mentions[0]
-                await self.bot.db.execute(
-                    f"UPDATE Guild SET LogChannel=? WHERE GuildID=?", (the_chan.id, ctx.message.guild.id))
-                await self.bot.db.commit()
-                get_guild_object = await Lottery.get_guild_object(self, ctx.message.guild.id)
-                get_guild_object.logchannel = the_chan.id
-                e = discord.Embed(colour=discord.Colour(0x03bd33),
-                    description=f"<:tickYes:315009125694177281> Log channel has been updated to {the_chan.name}")
-                await ctx.send(embed=e)
-
-
-            else:
-                e = discord.Embed(colour=discord.Colour(0xbf2003),
-                description=f"<:no:609076414469373971> {ctx.author.name}, please provide only a single channel to set!")
-                await ctx.send(embed=e)
-
-    @is_guild_owner()
-    @config.command()
-    async def lottochan(self, ctx, chan: str = None):
-        """The channel you would like to use for the lottery, $config lottochan <#channel>"""
-        if not chan or not ctx.message.channel_mentions:
-            e = discord.Embed(colour=discord.Colour(0xbf2003),
-                            description=f"<:no:609076414469373971> {ctx.author.name}, please provide a channel to set!")
-            await ctx.send(embed=e)
-            return
-        if ctx.message.channel_mentions:
-            if len(ctx.message.channel_mentions) == 1:
-                the_chan = ctx.message.channel_mentions[0]
-                await self.bot.db.execute(
-                    f"UPDATE Guild SET LottoChan=? WHERE GuildID=?", (the_chan.id, ctx.message.guild.id))
-                await self.bot.db.commit()
-                get_guild_object = await Lottery.get_guild_object(self, ctx.message.guild.id)
-                get_guild_object.lottochan = the_chan.id
-                e = discord.Embed(colour=discord.Colour(0x03bd33),
-                    description=f"<:tickYes:315009125694177281> Lotto channel has been updated to {the_chan.name}")
-                await ctx.send(embed=e)
-
-
-            else:
-                e = discord.Embed(colour=discord.Colour(0xbf2003),
-                description=f"<:no:609076414469373971> {ctx.author.name}, please provide only a single channel to set!")
-                await ctx.send(embed=e)
-
-    @is_guild_owner()
-    @config.command()
-    async def lcrole(self, ctx, lcrole: str = None):
-        """The role you would like to add to the last call for the lottery, $config lcrole <@role>"""
-        if not lcrole or not ctx.message.role_mentions:
-            e = discord.Embed(colour=discord.Colour(0xbf2003),
-                              description=f"<:no:609076414469373971> {ctx.author.name}, please provide a role to set!")
-            await ctx.send(embed=e)
-            return
-        if ctx.message.role_mentions:
-            if len(ctx.message.role_mentions) == 1:
-                the_role = ctx.message.role_mentions[0]
-                await self.bot.db.execute(
-                    f"UPDATE Guild SET LastCallRole=? WHERE GuildID=?", (the_role.id, ctx.message.guild.id))
-                await self.bot.db.commit()
-                get_guild_object = await Lottery.get_guild_object(self, ctx.message.guild.id)
-                get_guild_object.lcrole = the_role.id
-                e = discord.Embed(colour=discord.Colour(0x03bd33),
-                    description=f"<:tickYes:315009125694177281> Last call role has been updated to {the_role.name}")
-                await ctx.send(embed=e)
-                return
-
-
-            else:
-                e = discord.Embed(colour=discord.Colour(0xbf2003), description=f"<:no:609076414469373971> "
-                                                            f"{ctx.author.name}, please provide only a single role!")
-                await ctx.send(embed=e)
-
-    @is_guild_owner()
-    @config.command()
-    async def emoji(self, ctx, the_emoji: str = None):
-        if not the_emoji:
-            await ctx.send('no emoji provided :(')
-        if the_emoji:
-            try:
-                emoji = await commands.EmojiConverter().convert(ctx, the_emoji)
-                if emoji:
-                    the_emoji = f"<:{emoji.name}:{emoji.id}>"
-            except:
-                the_emoji = str(the_emoji)
-            await self.bot.db.execute(
-                f"UPDATE Guild SET CustomEmoji=? WHERE GuildID=?", (the_emoji, ctx.guild.id))
-            await self.bot.db.commit()
-            await ctx.send(the_emoji)
-
-    @is_guild_owner()
-    @config.command()
-    async def setprefix(self, ctx, prefix: str = None):
-        """The new prefix you would like to use for the bot, $config prefix <newprefix>"""
-        if not prefix or len(prefix) >= 3:
-            e = discord.Embed(colour=discord.Colour(0xbf2003),
-                            description=f"<:no:609076414469373971> {ctx.author.name}, please provide a prefix with a length of 2 or less.")
-            await ctx.send(embed=e)
-            return
-        if prefix and len(prefix) <= 2:
-            await self.bot.db.execute(
-                    f"UPDATE Guild SET Prefix=? WHERE GuildID=?", (prefix, ctx.message.guild.id))
-            await self.bot.db.commit()
-            if ctx.message.guild.id in list(self.bot.prefixdict.keys()):
-                self.bot.prefixdict[ctx.message.guild.id] = prefix
-            if ctx.message.guild.id not in list(self.bot.prefixdict.keys()):
-                self.bot.prefixdict[ctx.message.guild.id] = prefix
-            e = discord.Embed(colour=discord.Colour(0x03bd33),
-                description=f"<:tickYes:315009125694177281> Lotto channel has been updated to {prefix}")
-            await ctx.send(embed=e)
 
 
     @commands.command()
@@ -807,7 +673,7 @@ class Lottery(commands.Cog):
             get_message = await ctx.message.channel.fetch_message(message)
             await get_message.delete()
             e = discord.Embed(colour=discord.Colour(0x03bd33),
-                              description=f"<:tickYes:315009125694177281> {ctx.author.name}, lottery has  been released")
+                              description=f"<:tickYes:611582439126728716> {ctx.author.name}, lottery has  been released")
             await ctx.send(embed=e)
             get_guild_object = await Lottery.get_guild_object(self, ctx.message.guild.id)
             get_guild_object.sentline = True
@@ -861,7 +727,7 @@ class Lottery(commands.Cog):
                                           (torn_id, member.id))
                 await self.bot.db.commit()
                 e = discord.Embed(colour=discord.Colour(0x03bd33),
-                                  description=f"<:tickYes:315009125694177281> {ctx.author.name}, {member.name}'s id has been updated to {torn_id}")
+                                  description=f"<:tickYes:611582439126728716> {ctx.author.name}, {member.name}'s id has been updated to {torn_id}")
                 await ctx.send(embed=e)
                 return
 
@@ -876,6 +742,161 @@ class Lottery(commands.Cog):
         print(exception)
         if not isinstance(exception, NotAuthorized) and not str(exception).startswith('Torn says'):
             await ctx.send('Member not found! Try mentioning them instead.')
+
+    @commands.group()
+    @is_guild_owner()
+    async def config(self, ctx):
+        """Guild owner only, configuration setup"""
+        if ctx.invoked_subcommand is None:
+            e = discord.Embed(colour=discord.Colour(0xbf2003),
+                              description=f"<:no:609076414469373971> {ctx.author.name}, not a valid command.")
+            await ctx.send(embed=e)
+
+    @is_guild_owner()
+    @config.command()
+    async def bannedrole(self, ctx, role: str = None):
+        """The role you would like to add to the banned from lottos list, $config bannedrole <@role>"""
+        if not role or not ctx.message.role_mentions:
+            e = discord.Embed(colour=discord.Colour(0xbf2003),
+                              description=f"<:no:609076414469373971> {ctx.author.name}, please provide a role to set!")
+            await ctx.send(embed=e)
+            return
+        if ctx.message.role_mentions:
+            if len(ctx.message.role_mentions) == 1:
+                the_role = ctx.message.role_mentions[0]
+                await self.bot.db.execute(
+                    f"UPDATE Guild SET BannedID=? WHERE GuildID=", (the_role.id, ctx.message.guild.id))
+                await self.bot.db.commit()
+                get_guild_object = await Lottery.get_guild_object(self, ctx.message.guild.id)
+                get_guild_object.bannedid = the_role.id
+                e = discord.Embed(colour=discord.Colour(0x03bd33),
+                                  description=f"<:tickYes:611582439126728716> Banned role has been updated to {the_role.name}")
+                await ctx.send(embed=e)
+
+            else:
+                e = discord.Embed(colour=discord.Colour(0xbf2003),
+                                  description=f"<:no:609076414469373971> {ctx.author.name}, please provide only a single role!")
+                await ctx.send(embed=e)
+
+    @is_guild_owner()
+    @config.command()
+    async def logchan(self, ctx, chan: str = None):
+        """The channel you would like to use for logging, $config logchan <#channel>"""
+        if not chan or not ctx.message.channel_mentions:
+            e = discord.Embed(colour=discord.Colour(0xbf2003),
+                              description=f"<:no:609076414469373971> {ctx.author.name}, please provide a channel to set!")
+            await ctx.send(embed=e)
+            return
+        if ctx.message.channel_mentions:
+            if len(ctx.message.channel_mentions) == 1:
+                the_chan = ctx.message.channel_mentions[0]
+                await self.bot.db.execute(
+                    f"UPDATE Guild SET LogChannel=? WHERE GuildID=?", (the_chan.id, ctx.message.guild.id))
+                await self.bot.db.commit()
+                get_guild_object = await Lottery.get_guild_object(self, ctx.message.guild.id)
+                get_guild_object.logchannel = the_chan.id
+                e = discord.Embed(colour=discord.Colour(0x03bd33),
+                                  description=f"<:tickYes:611582439126728716> Log channel has been updated to {the_chan.name}")
+                await ctx.send(embed=e)
+
+
+            else:
+                e = discord.Embed(colour=discord.Colour(0xbf2003),
+                                  description=f"<:no:609076414469373971> {ctx.author.name}, please provide only a single channel to set!")
+                await ctx.send(embed=e)
+
+    @is_guild_owner()
+    @config.command()
+    async def lottochan(self, ctx, chan: str = None):
+        """The channel you would like to use for the lottery, $config lottochan <#channel>"""
+        if not chan or not ctx.message.channel_mentions:
+            e = discord.Embed(colour=discord.Colour(0xbf2003),
+                              description=f"<:no:609076414469373971> {ctx.author.name}, please provide a channel to set!")
+            await ctx.send(embed=e)
+            return
+        if ctx.message.channel_mentions:
+            if len(ctx.message.channel_mentions) == 1:
+                the_chan = ctx.message.channel_mentions[0]
+                await self.bot.db.execute(
+                    f"UPDATE Guild SET LottoChan=? WHERE GuildID=?", (the_chan.id, ctx.message.guild.id))
+                await self.bot.db.commit()
+                get_guild_object = await Lottery.get_guild_object(self, ctx.message.guild.id)
+                get_guild_object.lottochan = the_chan.id
+                e = discord.Embed(colour=discord.Colour(0x03bd33),
+                                  description=f"<:tickYes:611582439126728716> Lotto channel has been updated to {the_chan.name}")
+                await ctx.send(embed=e)
+
+
+            else:
+                e = discord.Embed(colour=discord.Colour(0xbf2003),
+                                  description=f"<:no:609076414469373971> {ctx.author.name}, please provide only a single channel to set!")
+                await ctx.send(embed=e)
+
+    @is_guild_owner()
+    @config.command()
+    async def lcrole(self, ctx, lcrole: str = None):
+        """The role you would like to add to the last call for the lottery, $config lcrole <@role>"""
+        if not lcrole or not ctx.message.role_mentions:
+            e = discord.Embed(colour=discord.Colour(0xbf2003),
+                              description=f"<:no:609076414469373971> {ctx.author.name}, please provide a role to set!")
+            await ctx.send(embed=e)
+            return
+        if ctx.message.role_mentions:
+            if len(ctx.message.role_mentions) == 1:
+                the_role = ctx.message.role_mentions[0]
+                await self.bot.db.execute(
+                    f"UPDATE Guild SET LastCallRole=? WHERE GuildID=?", (the_role.id, ctx.message.guild.id))
+                await self.bot.db.commit()
+                get_guild_object = await Lottery.get_guild_object(self, ctx.message.guild.id)
+                get_guild_object.lcrole = the_role.id
+                e = discord.Embed(colour=discord.Colour(0x03bd33),
+                                  description=f"<:tickYes:611582439126728716> Last call role has been updated to {the_role.name}")
+                await ctx.send(embed=e)
+                return
+
+
+            else:
+                e = discord.Embed(colour=discord.Colour(0xbf2003), description=f"<:no:609076414469373971> "
+                                                                               f"{ctx.author.name}, please provide only a single role!")
+                await ctx.send(embed=e)
+
+    @is_guild_owner()
+    @config.command()
+    async def emoji(self, ctx, the_emoji: str = None):
+        if not the_emoji:
+            await ctx.send('no emoji provided :(')
+        if the_emoji:
+            try:
+                emoji = await commands.EmojiConverter().convert(ctx, the_emoji)
+                if emoji:
+                    the_emoji = f"<:{emoji.name}:{emoji.id}>"
+            except:
+                the_emoji = str(the_emoji)
+            await self.bot.db.execute(
+                f"UPDATE Guild SET CustomEmoji=? WHERE GuildID=?", (the_emoji, ctx.guild.id))
+            await self.bot.db.commit()
+            await ctx.send(the_emoji)
+
+    @is_guild_owner()
+    @config.command()
+    async def setprefix(self, ctx, prefix: str = None):
+        """The new prefix you would like to use for the bot, $config prefix <newprefix>"""
+        if not prefix or len(prefix) >= 3:
+            e = discord.Embed(colour=discord.Colour(0xbf2003),
+                              description=f"<:no:609076414469373971> {ctx.author.name}, please provide a prefix with a length of 2 or less.")
+            await ctx.send(embed=e)
+            return
+        if prefix and len(prefix) <= 2:
+            await self.bot.db.execute(
+                f"UPDATE Guild SET Prefix=? WHERE GuildID=?", (prefix, ctx.message.guild.id))
+            await self.bot.db.commit()
+            if ctx.message.guild.id in list(self.bot.prefixdict.keys()):
+                self.bot.prefixdict[ctx.message.guild.id] = prefix
+            if ctx.message.guild.id not in list(self.bot.prefixdict.keys()):
+                self.bot.prefixdict[ctx.message.guild.id] = prefix
+            e = discord.Embed(colour=discord.Colour(0x03bd33),
+                              description=f"<:tickYes:611582439126728716> Lotto channel has been updated to {prefix}")
+            await ctx.send(embed=e)
 
 
 def setup(bot):

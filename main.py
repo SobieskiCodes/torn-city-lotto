@@ -9,21 +9,18 @@ from cogs.util.errorhandling import NotAuthorized, SlyBastard, NotAdded, TempBan
 
 async def get_prefix(bot, message):
     if message.guild:
-        fetch = await bot.db.execute(f'SELECT Prefix FROM Guild WHERE GuildID=?', (message.guild.id, ))
-        result = await fetch.fetchone()
-        if not result:
-            prefix = '$'
+        if message.guild.id in list(bot.prefixdict.keys()):
+            prefix = bot.prefixdict.get(message.guild.id)
         else:
-            prefix = result[0]
+            prefix = '$'
     else:
         prefix = '$'
     return commands.when_mentioned_or(*prefix)(bot, message)
 
 
 bot = commands.AutoShardedBot(command_prefix=get_prefix, pm_help=True)
-
-
-
+bot.prefixdict = {}
+bot.bot_commands = ['j', 'join', 'close', 'end', 'lastcall', 'c', 'lc', 'release', 'sl', 'startlotto']
 @bot.event
 async def on_guild_join(guild):
     get_guild = await bot.db.execute(f'SELECT GuildID FROM Guild WHERE GuildID=?', (guild.id, ))
@@ -33,10 +30,29 @@ async def on_guild_join(guild):
         await bot.db.commit()
 
 
+@bot.check
+async def __before_invoke(ctx):
+    for guild in ctx.bot.guildconfigs:
+        if guild.guildid == ctx.guild.id:
+            guildconfigobject = list(ctx.bot.guildconfigs).index(guild)
+            guild_ob = ctx.bot.guildconfigs[guildconfigobject]
+            if guild_ob.lottochan:
+                channel = ctx.bot.get_channel(guild_ob.lottochan)
+                if ctx.message.channel == channel:
+                    return True
+                if not ctx.message.channel == channel:
+                    return False
+            if not guild_ob.lottochan:
+                return True
 
 @bot.event
 async def on_ready():
     print(f'\n\nLogged in as: {bot.user.name} - {bot.user.id}')
+    bot.prefixdict = {}
+    for guild in bot.guilds:
+        fetch = await bot.db.execute(f'SELECT Prefix FROM Guild WHERE GuildID=?', (guild.id,))
+        result = await fetch.fetchone()
+        bot.prefixdict[guild.id] = result[0] if result else '$'
 
 
 @bot.event

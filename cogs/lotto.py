@@ -2,10 +2,10 @@ from discord.ext import commands
 import discord
 import random
 import asyncio
-from cogs.util.errorhandling import SlyBastard
+from cogs.util.errorhandling import SlyBastard, NotAuthorized
 import re
 from datetime import datetime
-from cogs.util.checks import has_id_added, temp_ban, is_guild_owner
+from cogs.util.checks import has_id_added, temp_ban, is_guild_owner, is_mod
 
 
 class Lotto:
@@ -24,7 +24,7 @@ class Lotto:
 
 
 class GuildConfig:
-    def __init__(self, guildid, lbembed, bannedrole, logchannel, lottochan, emoji, lcrole, sentline, lastcall, sentlineauthor):
+    def __init__(self, guildid, lbembed, bannedrole, logchannel, lottochan, emoji, lcrole, sentline, lastcall, sentlineauthor, runninglotto):
         self.guildid = guildid
         self.lbembed = lbembed
         self.bannedrole = bannedrole
@@ -36,6 +36,7 @@ class GuildConfig:
         self.lastcall = lastcall
         self.sentline = sentline
         self.sentlineauthor = sentlineauthor
+        self.runninglotto = runninglotto
 
     def __repr__(self):
         return f'{self.guildid}'
@@ -62,6 +63,7 @@ class Lottery(commands.Cog):
             lbembed = None
             sentline = True
             lastcall = False
+            runninglotto = False
             sentlineauthor = ''
             get_logchannel = await self.bot.fetch.one('SELECT LogChannel FROM Guild WHERE GuildID=?', (guild.id, ))
             get_lcrole = await self.bot.fetch.one('SELECT LastCallRole FROM Guild WHERE GuildID=?', (guild.id, ))
@@ -72,9 +74,9 @@ class Lottery(commands.Cog):
             lottochan = get_lottochan[0] if get_lottochan else None
             emoji = get_emoji[0] if get_emoji else None
             self.bot.loop.create_task(Lottery.update(self, guild))
-            test = GuildConfig(guildid, lbembed, bannedrole, logchannel, lcrole, lottochan, emoji, sentline, lastcall, sentlineauthor)
+            test = GuildConfig(guildid, lbembed, bannedrole, logchannel, lottochan, emoji, lcrole, sentline, lastcall, sentlineauthor, runninglotto)
             self.bot.guildconfigs.append(test)
-            self.bot.loop.create_task(Lottery.load_item_dict(self))
+        self.bot.loop.create_task(Lottery.load_item_dict(self))
         print('Done loading startup and updating leaderboards... ids should be added.')
 
     async def load_item_dict(self):
@@ -144,15 +146,17 @@ class Lottery(commands.Cog):
     async def on_message(self, message):
         if not message.guild:
             return
-        bot_commands = ['$j', '$c', '$lc']
+        the_prefix = self.bot.prefixdict.get(message.guild.id) if message.guild.id in list(self.bot.prefixdict.keys()) else '$'
+        list_bot_commands = [f'{the_prefix}{x}' for x in self.bot.bot_commands]
         get_lotto_object = await Lottery.get_running_lottos(self, message.guild.id)
-        if get_lotto_object and message.content not in bot_commands:
-            if message.channel.id == get_lotto_object.chanid and message.author.id != self.bot.user.id:
-                get_message_id = get_lotto_object.messageid
-                get_the_message = await message.channel.fetch_message(get_message_id)
-                sticky_bottom = await message.channel.send(embed=get_the_message.embeds[0])
-                get_lotto_object.messageid = sticky_bottom.id
-                await get_the_message.delete()
+        if message.author.id != self.bot.user.id:
+            if get_lotto_object and message.content not in list_bot_commands and not message.content.startswith(f'{the_prefix}sl'):
+                if message.channel.id == get_lotto_object.chanid:
+                    get_message_id = get_lotto_object.messageid
+                    get_the_message = await message.channel.fetch_message(get_message_id)
+                    sticky_bottom = await message.channel.send(embed=get_the_message.embeds[0])
+                    get_lotto_object.messageid = sticky_bottom.id
+                    await get_the_message.delete()
 
     @temp_ban()
     @has_id_added()
@@ -176,13 +180,19 @@ class Lottery(commands.Cog):
                 e = discord.Embed(colour=discord.Colour(0xbf2003),
                                   description=f"<:no:609076414469373971> {ctx.author.name}, "
                                               f"still waiting on a sent line from {get_guild_object.sentlineauthor}")
-                await ctx.send(embed=e)
+                send_a_message = await ctx.send(embed=e)
+                await ctx.message.delete()
+                await asyncio.sleep(2)
+                await send_a_message.delete()
                 return
 
-            if get_lotto_object in list(self.bot.running_lottos):
+            if get_lotto_object in list(self.bot.running_lottos) or get_guild_object.runninglotto:
                 e = discord.Embed(colour=discord.Colour(0xbf2003),
                                   description=f"<:no:609076414469373971> {ctx.author.name}, already a lotto running!")
-                await ctx.send(embed=e)
+                send_it = await ctx.send(embed=e)
+                await ctx.message.delete()
+                await asyncio.sleep(2)
+                await send_it.delete()
                 return
 
             if get_lotto_object not in list(self.bot.running_lottos) and get_guild_object.sentline:
@@ -204,6 +214,7 @@ class Lottery(commands.Cog):
                 e.set_footer(text="Type $j to join!")
                 lottery_message = await ctx.send(embed=e)
                 test = Lotto(ctx.author, item, string_discript, lottery_message.id, ctx.channel.id, ctx.guild.id)
+                get_guild_object.runninglotto = True
                 self.bot.running_lottos.append(test)
 
     @temp_ban()
@@ -212,42 +223,51 @@ class Lottery(commands.Cog):
     async def j(self, ctx):
         """Join an on going lottery if one is going.
         """
-        if self.bot.running_lottos:
-            get_lotto_object = await Lottery.get_running_lottos(self, ctx.message.guild.id)
-            if get_lotto_object:
-                if ctx.author.id == get_lotto_object.author.id:
-                    raise SlyBastard
-                if ctx.author.id in list(get_lotto_object.entrants):
-                    e = discord.Embed(colour=discord.Colour(0xbf2003),
-                                      description=f"<:no:609076414469373971> {ctx.author.name} has already entered")
-                    remove = await ctx.send(embed=e)
-                    await ctx.message.delete()
-                    await asyncio.sleep(3)
-                    await remove.delete()
-                    return
-                if ctx.author.id not in list(get_lotto_object.entrants):
-                    get_lotto_object.entrants.append(ctx.author.id)
-                    get_message_id = get_lotto_object.messageid
-                    get_the_message = await ctx.message.channel.fetch_message(get_message_id)
-                    e = discord.Embed(
-                        title=f"{get_lotto_object.author.name} is running a lotto!",
-                        description=f"{get_lotto_object.descrip}\nEntries: "
-                                    f"{len(get_lotto_object.entrants)}",
-                        colour=discord.Colour(0x278d89)
-                    )
-                    e.set_thumbnail(url=f"{get_the_message.embeds[0].thumbnail.url}")
-                    e.set_footer(text="Type $j to join!")
-                    await get_the_message.edit(embed=e)
-                await ctx.message.delete()
-            else:
+        get_lotto_object = await Lottery.get_running_lottos(self, ctx.message.guild.id)
+        get_guild_object = await Lottery.get_guild_object(self, ctx.message.guild.id)
+        if get_lotto_object and get_guild_object.runninglotto:
+            if ctx.author.id == get_lotto_object.author.id:
+                raise SlyBastard
+            if ctx.author.id in list(get_lotto_object.entrants):
                 e = discord.Embed(colour=discord.Colour(0xbf2003),
-                                  description=f"<:no:609076414469373971> {ctx.author.name} currently no lotto running!")
-                await ctx.send(embed=e)
+                                    description=f"<:no:609076414469373971> {ctx.author.name} has already entered")
+                remove = await ctx.send(embed=e)
+                await ctx.message.delete()
+                await asyncio.sleep(3)
+                await remove.delete()
                 return
-        else:
+            if ctx.author.id not in list(get_lotto_object.entrants):
+                get_lotto_object.entrants.append(ctx.author.id)
+                get_message_id = get_lotto_object.messageid
+                get_the_message = await ctx.message.channel.fetch_message(get_message_id)
+                e = discord.Embed(
+                    title=f"{get_lotto_object.author.name} is running a lotto!",
+                    description=f"{get_lotto_object.descrip}\nEntries: "
+                                f"{len(get_lotto_object.entrants)}",
+                    colour=discord.Colour(0x278d89)
+                )
+                e.set_thumbnail(url=f"{get_the_message.embeds[0].thumbnail.url}")
+                e.set_footer(text="Type $j to join!")
+                await get_the_message.edit(embed=e)
+            await ctx.message.delete()
+
+        if get_lotto_object and not get_guild_object.sentline:
+            e = discord.Embed(colour=discord.Colour(0xbf2003),
+                              description=f"<:no:609076414469373971> {ctx.author.name}, "
+                                          f"still waiting on a sent line from {get_guild_object.sentlineauthor}")
+            send_a_message = await ctx.send(embed=e)
+            await ctx.message.delete()
+            await asyncio.sleep(2)
+            await send_a_message.delete()
+            return
+
+        if not get_lotto_object:
             e = discord.Embed(colour=discord.Colour(0xbf2003),
                               description=f"<:no:609076414469373971> {ctx.author.name} currently no lotto running!")
-            await ctx.send(embed=e)
+            send_it = await ctx.send(embed=e)
+            await ctx.message.delete()
+            await asyncio.sleep(2)
+            await send_it.delete()
 
     async def end_lotto(self, ctx):
         await asyncio.sleep(15)
@@ -255,8 +275,38 @@ class Lottery(commands.Cog):
         get_message_id = get_lotto_object.messageid
         entrants = len(get_lotto_object.entrants)
         get_the_message = await ctx.message.channel.fetch_message(get_message_id)
-        winner = ctx.guild.get_member(random.choice(get_lotto_object.entrants))
-        winner_torn_id = await self.bot.fetch.one(f'SELECT TornID FROM Users WHERE DiscordID={winner.id}')
+        while True:
+            winner = ctx.guild.get_member(random.choice(get_lotto_object.entrants))
+            winner_torn_id = await self.bot.fetch.one(f'SELECT TornID FROM Users WHERE DiscordID=?', (winner.id, ))
+            check_activity = await self.bot.torn.api.get_profile(winner_torn_id[0])
+            activity = str(check_activity['last_action']['relative'])
+            if 'days' in activity:
+                split_it_up = activity.split(" ")
+                if int(split_it_up[0]) <= 13:
+                    break
+                if int(split_it_up[0]) >= 14:
+                    get_guild_object = await Lottery.get_guild_object(self, ctx.message.guild.id)
+                    if get_guild_object.logchannel:
+                        channel = self.bot.get_channel(get_guild_object.logchannel)
+                        torn_id = await self.bot.fetch.one(
+                            f'SELECT TornID FROM Users WHERE DiscordID=?', (winner.id, ))
+                        get_lotto_object = await Lottery.get_running_lottos(self, ctx.message.guild.id)
+                        e = discord.Embed(
+                            title=f"[ModLog] {winner.name} [{torn_id[0]}] should have won....",
+                            timestamp=datetime.utcnow(),
+                            description=
+                            f"but their last activity was {split_it_up[0]} days ago. \nStaff please check this.\n",
+                            colour=discord.Colour(0xe1760b)
+
+                        )
+                        e.set_footer(text=f"Event time")
+                        e.set_thumbnail(url=f"{ctx.author.avatar_url}")
+                        await channel.send(embed=e)
+                        self.bot.running_lottos.remove(get_lotto_object)
+                await asyncio.sleep(2)
+            if 'days' not in activity:
+                break
+
         e = discord.Embed(
             title=f"{ctx.message.author.name}'s lotto has ended!",
             description=f"{winner.mention} won {get_lotto_object.prize}! <:party:577578847080546304>\n"
@@ -269,8 +319,9 @@ class Lottery(commands.Cog):
         await get_the_message.edit(embed=e)
         get_guild_object = await Lottery.get_guild_object(self, ctx.message.guild.id)
         get_guild_object.sentline = False
+        get_guild_object.runninglotto = False
         time = datetime.now() - get_lotto_object.starttime
-        self.bot.running_lottos.remove(get_lotto_object)
+        #self.bot.running_lottos.remove(get_lotto_object) #----------------------------------------------------------------------------------------------------------
         get_guild_object.sentlineauthor = ctx.author
         regex = r"^(?:you sent) (?:[a-z]+)?([0-9]+[a-z]{1}|\$[0-9,]+)?\ ?([0-9a-z\-,+: ]+?)? (?:to)(?:.*)"
 
@@ -374,6 +425,7 @@ class Lottery(commands.Cog):
             e.set_footer(text=f"Total value of prize: ${pretty_value[:-3]}")
             e.set_thumbnail(url=f"{ctx.guild.icon_url}")
             await get_the_message.edit(embed=e)
+            self.bot.running_lottos.remove(get_lotto_object)
             if get_guild_object.logchannel:
                 channel = self.bot.get_channel(get_guild_object.logchannel)
                 e = discord.Embed(
@@ -649,6 +701,33 @@ class Lottery(commands.Cog):
 
     @is_guild_owner()
     @config.command()
+    async def lottochan(self, ctx, chan: str = None):
+        """The channel you would like to use for the lottery, $config lottochan <#channel>"""
+        if not chan or not ctx.message.channel_mentions:
+            e = discord.Embed(colour=discord.Colour(0xbf2003),
+                            description=f"<:no:609076414469373971> {ctx.author.name}, please provide a channel to set!")
+            await ctx.send(embed=e)
+            return
+        if ctx.message.channel_mentions:
+            if len(ctx.message.channel_mentions) == 1:
+                the_chan = ctx.message.channel_mentions[0]
+                await self.bot.db.execute(
+                    f"UPDATE Guild SET LottoChan=? WHERE GuildID=?", (the_chan.id, ctx.message.guild.id))
+                await self.bot.db.commit()
+                get_guild_object = await Lottery.get_guild_object(self, ctx.message.guild.id)
+                get_guild_object.lottochan = the_chan.id
+                e = discord.Embed(colour=discord.Colour(0x03bd33),
+                    description=f"<:tickYes:315009125694177281> Lotto channel has been updated to {the_chan.name}")
+                await ctx.send(embed=e)
+
+
+            else:
+                e = discord.Embed(colour=discord.Colour(0xbf2003),
+                description=f"<:no:609076414469373971> {ctx.author.name}, please provide only a single channel to set!")
+                await ctx.send(embed=e)
+
+    @is_guild_owner()
+    @config.command()
     async def lcrole(self, ctx, lcrole: str = None):
         """The role you would like to add to the last call for the lottery, $config lcrole <@role>"""
         if not lcrole or not ctx.message.role_mentions:
@@ -692,10 +771,111 @@ class Lottery(commands.Cog):
             await self.bot.db.commit()
             await ctx.send(the_emoji)
 
+    @is_guild_owner()
+    @config.command()
+    async def setprefix(self, ctx, prefix: str = None):
+        """The new prefix you would like to use for the bot, $config prefix <newprefix>"""
+        if not prefix or len(prefix) >= 3:
+            e = discord.Embed(colour=discord.Colour(0xbf2003),
+                            description=f"<:no:609076414469373971> {ctx.author.name}, please provide a prefix with a length of 2 or less.")
+            await ctx.send(embed=e)
+            return
+        if prefix and len(prefix) <= 2:
+            await self.bot.db.execute(
+                    f"UPDATE Guild SET Prefix=? WHERE GuildID=?", (prefix, ctx.message.guild.id))
+            await self.bot.db.commit()
+            if ctx.message.guild.id in list(self.bot.prefixdict.keys()):
+                self.bot.prefixdict[ctx.message.guild.id] = prefix
+            if ctx.message.guild.id not in list(self.bot.prefixdict.keys()):
+                self.bot.prefixdict[ctx.message.guild.id] = prefix
+            e = discord.Embed(colour=discord.Colour(0x03bd33),
+                description=f"<:tickYes:315009125694177281> Lotto channel has been updated to {prefix}")
+            await ctx.send(embed=e)
+
+
     @commands.command()
     async def test(self, ctx):
-        print(self.bot.emojis)
-        print(type(self.bot.emojis))
+        get_guild_object = await Lottery.get_guild_object(self, ctx.message.guild.id)
+        print(get_guild_object.sentline)
+
+    @is_mod()
+    @commands.command()
+    async def release(self, ctx):
+        get_lotto_object = await Lottery.get_running_lottos(self, ctx.message.guild.id)
+        if get_lotto_object and get_lotto_object in list(self.bot.running_lottos):
+            message = get_lotto_object.messageid
+            get_message = await ctx.message.channel.fetch_message(message)
+            await get_message.delete()
+            e = discord.Embed(colour=discord.Colour(0x03bd33),
+                              description=f"<:tickYes:315009125694177281> {ctx.author.name}, lottery has  been released")
+            await ctx.send(embed=e)
+            get_guild_object = await Lottery.get_guild_object(self, ctx.message.guild.id)
+            get_guild_object.sentline = True
+            get_guild_object.lastcall = False
+            get_guild_object.runninglotto = False
+            if get_guild_object.logchannel:
+                channel = self.bot.get_channel(get_guild_object.logchannel)
+                torn_id = await self.bot.fetch.one(f'SELECT TornID FROM Users WHERE DiscordID=?', (get_lotto_object.author.id, ))
+                get_lotto_object = await Lottery.get_running_lottos(self, ctx.message.guild.id)
+                e = discord.Embed(
+                    title=f"[ModLog] {ctx.author.name} released a lotto",
+                    timestamp=datetime.utcnow(),
+                    description=
+                    f"Lotto author: {get_lotto_object.author.name} [{torn_id[0]}]\n"
+                    f"Prize: {get_lotto_object.prize}\n\n"
+                    ,
+                    colour=discord.Colour(0xe1760b)
+
+                )
+                e.set_footer(text=f"Event time")
+                e.set_thumbnail(url=f"{ctx.author.avatar_url}")
+                await channel.send(embed=e)
+                self.bot.running_lottos.remove(get_lotto_object)
+            return
+        if not get_lotto_object:
+            e = discord.Embed(colour=discord.Colour(0xbf2003),
+                              description=f"<:no:609076414469373971> {ctx.author.name}, no lotto running.")
+            await ctx.send(embed=e)
+            return
+
+    @is_mod()
+    @commands.command()
+    async def fixid(self, ctx, member: discord.Member = None, torn_id: str = None):
+        if not torn_id:
+            e = discord.Embed(colour=discord.Colour(0xbf2003),
+                              description=f"<:no:609076414469373971> {ctx.author.name} please provide a torn id!")
+            await ctx.send(embed=e)
+            return
+
+        if not torn_id.isdigit():
+            e = discord.Embed(colour=discord.Colour(0xbf2003),
+                            description=f"<:no:609076414469373971> {ctx.author.name} that doesnt look like a torn id!")
+            await ctx.send(embed=e)
+            return
+
+        if torn_id and torn_id.isdigit():
+            get_user = await self.bot.fetch.one(f'SELECT * FROM Users WHERE DiscordID=?', (member.id, ))
+            if get_user:
+                get_json = await self.bot.torn.api.get_profile(torn_id)
+                await self.bot.db.execute(f"UPDATE Users SET TornID=? WHERE DiscordID=?",
+                                          (torn_id, member.id))
+                await self.bot.db.commit()
+                e = discord.Embed(colour=discord.Colour(0x03bd33),
+                                  description=f"<:tickYes:315009125694177281> {ctx.author.name}, {member.name}'s id has been updated to {torn_id}")
+                await ctx.send(embed=e)
+                return
+
+            if not get_user:
+                e = discord.Embed(colour=discord.Colour(0xbf2003),
+                                  description=f"<:no:609076414469373971> {ctx.author.name}, couldnt find an id for {member.name}")
+                await ctx.send(embed=e)
+                return
+
+    @fixid.error
+    async def member_not_found_error(self, ctx, exception):
+        print(exception)
+        if not isinstance(exception, NotAuthorized) and not str(exception).startswith('Torn says'):
+            await ctx.send('Member not found! Try mentioning them instead.')
 
 
 def setup(bot):

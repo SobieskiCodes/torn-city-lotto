@@ -1,7 +1,8 @@
 from discord.ext import commands
 import discord
 import asyncio
-from cogs.util.checks import has_id_added, is_mod, is_guild_owner
+from cogs.util.checks import is_mod, is_guild_owner
+from cogs.util.errorhandling import NotAdded
 from datetime import datetime
 import random
 
@@ -16,10 +17,14 @@ class timedGiveaway(commands.Cog):
     async def on_ready(self):
         for guild in self.bot.guilds:
             get_giveaway_chan = await self.bot.fetch.one('SELECT GiveAwayChan FROM Guild WHERE GuildID=?', (guild.id, ))
-            if get_giveaway_chan[0]:
-                self.bot.gaveawaydict[guild.id] = get_giveaway_chan[0]
+            if get_giveaway_chan:
+                if get_giveaway_chan[0]:
+                    self.bot.gaveawaydict[guild.id] = get_giveaway_chan[0]
 
     async def cog_check(self, ctx):
+        if not self.bot.cogcheck.get(str(ctx.guild.id)).get('giveaway').data:
+            return False
+
         if self.bot.gaveawaydict:
             for guild in self.bot.gaveawaydict:
                 if ctx.guild.id == guild:
@@ -34,6 +39,14 @@ class timedGiveaway(commands.Cog):
     async def on_reaction_add(self, reaction, user):
         if reaction.message.id not in self.bot.giveawayslist:
             return
+
+        if user.id not in self.bot.addedids and user.id != self.bot.user.id:
+            test = await reaction.message.channel.send(f"{user.mention}, please add your torn ID using $addid <id>!")
+            await reaction.message.remove_reaction(reaction.emoji, user)
+            await asyncio.sleep(3)
+            await test.delete()
+            return
+
         get_the_emoji = self.bot.get_emoji(577578847080546304)
         if reaction.emoji != get_the_emoji:
             await reaction.message.remove_reaction(reaction.emoji, user)
@@ -59,15 +72,16 @@ class timedGiveaway(commands.Cog):
         for reaction in refresh_message.reactions:
             users = await reaction.users().flatten()
         while True:
-            winner = random.choice(users)
-            if winner != self.bot.user and winner != ctx.author:
+            winner = random.sample(users, winners)
+            if self.bot.user not in winner and ctx.author not in winner:
                 break
             if len(users) <= 2:
                 break
+
         if len(users) > 2:
             new_e = discord.Embed(
                 title=f"<:party:577578847080546304>{ctx.message.author.name}'s giveaway has ended!<:party:577578847080546304>",
-                description=f"The prize: {prize} \nWinner: {winner.mention}\nNumber of entries: {len(users)}\n",
+                description=f"The prize: {prize} \nWinner: {', '.join(win.mention for win in winner)}\nNumber of entries: {len(users)}\n",
                 timestamp=datetime.utcnow(),
                 colour=discord.Colour(0x278d89)
             )
@@ -139,7 +153,10 @@ class timedGiveaway(commands.Cog):
         if not chan or not ctx.message.channel_mentions:
             e = discord.Embed(colour=discord.Colour(0xbf2003),
                               description=f"<:no:609076414469373971> {ctx.author.name}, please provide a channel to set!")
-            await ctx.send(embed=e)
+            remove = await ctx.send(embed=e)
+            await ctx.message.delete()
+            await asyncio.sleep(3)
+            await remove.delete()
             return
         if ctx.message.channel_mentions:
             if len(ctx.message.channel_mentions) == 1:
@@ -150,12 +167,18 @@ class timedGiveaway(commands.Cog):
                 self.bot.gaveawaydict[ctx.guild.id] = the_chan.id
                 e = discord.Embed(colour=discord.Colour(0x03bd33),
                                   description=f"<:tickYes:611582439126728716> Giveaway channel has been updated to {the_chan.name}")
-                await ctx.send(embed=e)
+                remove = await ctx.send(embed=e)
+                await ctx.message.delete()
+                await asyncio.sleep(3)
+                await remove.delete()
 
             else:
                 e = discord.Embed(colour=discord.Colour(0xbf2003),
                                   description=f"<:no:609076414469373971> {ctx.author.name}, please provide only a single channel to set!")
-                await ctx.send(embed=e)
+                remove = await ctx.send(embed=e)
+                await ctx.message.delete()
+                await asyncio.sleep(3)
+                await remove.delete()
 
 
 def setup(bot):

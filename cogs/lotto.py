@@ -54,6 +54,9 @@ class Lottery(commands.Cog):
         self.bot.propdict = jthon.load('./cogs/util/data/propertydict').get('properties')
 
     async def cog_check(self, ctx):
+        if not self.bot.cogcheck.get(str(ctx.guild.id)).get('lotto').data:
+            return False
+
         for guild in ctx.bot.guildconfigs:
             if guild.guildid == ctx.guild.id:
                 guildconfigobject = list(ctx.bot.guildconfigs).index(guild)
@@ -161,6 +164,8 @@ class Lottery(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message):
         if not message.guild:
+            return
+        if message.author.bot:
             return
         the_prefix = self.bot.prefixdict.get(message.guild.id) if message.guild.id in list(self.bot.prefixdict.keys()) else '$'
         list_bot_commands = [f'{the_prefix}{x}' for x in self.bot.bot_commands]

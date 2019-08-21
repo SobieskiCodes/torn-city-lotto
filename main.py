@@ -20,30 +20,17 @@ async def get_prefix(bot, message):
 
 bot = commands.AutoShardedBot(command_prefix=get_prefix, pm_help=True)
 bot.prefixdict = {}
-bot.bot_commands = ['j', 'join', 'close', 'end', 'lastcall', 'c', 'lc', 'release', 'sl', 'startlotto']
+bot.bot_commands = ['j', 'join', 'close', 'end', 'lastcall', 'c', 'lc', 'release', 'sl', 'startlotto', 'll', 'lootlevel', 'loot']
 @bot.event
 async def on_guild_join(guild):
     get_guild = await bot.db.execute(f'SELECT GuildID FROM Guild WHERE GuildID=?', (guild.id, ))
     results = await get_guild.fetchone()
     if not results:
-        await bot.db.execute(f"INSERT INTO Guild(GuildID, Prefix, LottosRun, ItemValues, CashValues) VALUES (?, ?)", (guild.id, '$', 0, 0, 0))
+        await bot.db.execute(f"INSERT INTO Guild(GuildID, Prefix, LottosRun, ItemValues, CashValues) VALUES (?, ?, ?, ?, ?)", (guild.id, '$', 0, 0, 0))
         await bot.db.commit()
+    bot.cogcheck[str(guild.id)] = {"lotto": True, "giveaway": True}
+    bot.cogstuff.save()
 
-
-@bot.check
-async def __before_invoke(ctx):
-    for guild in ctx.bot.guildconfigs:
-        if guild.guildid == ctx.guild.id:
-            guildconfigobject = list(ctx.bot.guildconfigs).index(guild)
-            guild_ob = ctx.bot.guildconfigs[guildconfigobject]
-            if guild_ob.lottochan:
-                channel = ctx.bot.get_channel(guild_ob.lottochan)
-                if ctx.message.channel == channel:
-                    return True
-                if not ctx.message.channel == channel:
-                    return False
-            if not guild_ob.lottochan:
-                return True
 
 @bot.event
 async def on_ready():
@@ -53,6 +40,9 @@ async def on_ready():
         fetch = await bot.db.execute(f'SELECT Prefix FROM Guild WHERE GuildID=?', (guild.id,))
         result = await fetch.fetchone()
         bot.prefixdict[guild.id] = result[0] if result else '$'
+        if str(guild.id) not in bot.cogcheck:
+            bot.cogcheck[str(guild.id)] = {"lotto": True, "giveaway": True}
+            bot.cogstuff.save()
 
 
 @bot.event
@@ -187,9 +177,12 @@ class Fetch:
         return results
 
 
+
 bot.fetch = Fetch(bot)
 bot.loop.create_task(create_dbconnect())
 bot.config = jthon.load('data')
+bot.cogstuff = jthon.load('cogcheck')
+bot.cogcheck = bot.cogstuff.get('guilds')
 token = bot.config.get('config').get('token').data
 bot.torn_key = bot.config.get('config').get('torn_token').data
 bot.torn = Torn(bot.loop, key=bot.torn_key)

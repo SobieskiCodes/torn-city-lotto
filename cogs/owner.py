@@ -1,6 +1,7 @@
 from discord.ext import commands
 import discord
 from datetime import datetime
+from cogs.util.checks import is_mod
 
 
 class OwnerCog(commands.Cog):
@@ -8,6 +9,42 @@ class OwnerCog(commands.Cog):
         self.bot = bot
         self.boottime = datetime.now()
         self.version = 'v1.0.0'
+
+    @commands.command()
+    @is_mod()
+    async def enable(self, ctx, cog_name: str = None):
+        if not cog_name:
+            await ctx.send("Please provide the Category you would like to enable; giveaway, lotto")
+        choices = ['lotto', 'giveaway']
+        if cog_name in choices:
+            self.bot.cogcheck[str(ctx.guild.id)][cog_name] = True
+            self.bot.cogstuff.save()
+            await ctx.send(f"{cog_name} has been enabled.")
+        if not cog_name:
+            await ctx.send("Please provide the Category you would like to ensable; giveaway, lotto")
+
+    @commands.command()
+    @is_mod()
+    async def disable(self, ctx, cog_name: str = None):
+        if not cog_name:
+            await ctx.send("Please provide the Category you would like to disable; giveaway, lotto")
+        choices = ['lotto', 'giveaway']
+        if cog_name in choices:
+            self.bot.cogcheck[str(ctx.guild.id)][cog_name] = False
+            self.bot.cogstuff.save()
+            await ctx.send(f"{cog_name} has been enabled.")
+        if not cog_name:
+            await ctx.send("Please provide the Category you would like to disable; giveaway, lotto")
+
+    @commands.command()
+    @is_mod()
+    async def checkcogs(self, ctx):
+        the_string = ''
+        for item in self.bot.cogcheck[str(ctx.guild.id)]:
+            the_string += f"{item}: {self.bot.cogcheck[str(ctx.guild.id)].get(item)}\n"
+        await ctx.send(the_string)
+
+
 
     @commands.command(name='load', hidden=True)
     @commands.is_owner()

@@ -1,0 +1,595 @@
+{
+	"properties": {
+		"1": {
+			"name": "Trailer",
+			"cost": 5000,
+			"happy": 110,
+			"upkeep": 10,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification"
+			],
+			"staff_available": []
+		},
+		"2": {
+			"name": "Apartment",
+			"cost": 25000,
+			"happy": 125,
+			"upkeep": 25,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification"
+			],
+			"staff_available": []
+		},
+		"3": {
+			"name": "Semi-Detached House",
+			"cost": 75000,
+			"happy": 150,
+			"upkeep": 70,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna"
+			],
+			"staff_available": []
+		},
+		"4": {
+			"name": "Detached house",
+			"cost": 300000,
+			"happy": 200,
+			"upkeep": 150,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Small Pool",
+				"Medium Pool",
+				"Large Pool"
+			],
+			"staff_available": []
+		},
+		"5": {
+			"name": "Beach house",
+			"cost": 500000,
+			"happy": 300,
+			"upkeep": 200,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Small Pool",
+				"Medium Pool",
+				"Large Pool"
+			],
+			"staff_available": []
+		},
+		"6": {
+			"name": "Chalet",
+			"cost": 750000,
+			"happy": 350,
+			"upkeep": 300,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Small Pool",
+				"Medium Pool",
+				"Large Pool"
+			],
+			"staff_available": []
+		},
+		"7": {
+			"name": "Villa",
+			"cost": 1250000,
+			"happy": 400,
+			"upkeep": 350,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Small Pool",
+				"Medium Pool",
+				"Large Pool"
+			],
+			"staff_available": []
+		},
+		"8": {
+			"name": "Penthouse",
+			"cost": 2000000,
+			"happy": 450,
+			"upkeep": 450,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Open Bar",
+				"Small Pool",
+				"Medium Pool",
+				"Large Pool"
+			],
+			"staff_available": [
+				"Maid",
+				"Butler"
+			]
+		},
+		"9": {
+			"name": "Mansion",
+			"cost": 3000000,
+			"happy": 500,
+			"upkeep": 500,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Open Bar",
+				"Small Pool",
+				"Medium Pool",
+				"Large Pool"
+			],
+			"staff_available": [
+				"Maid",
+				"Butler",
+				"Guard"
+			]
+		},
+		"10": {
+			"name": "Ranch",
+			"cost": 15000000,
+			"happy": 600,
+			"upkeep": 1000,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Open Bar",
+				"Small Pool",
+				"Medium Pool",
+				"Large Pool",
+				"Advanced Shooting Range"
+			],
+			"staff_available": [
+				"Maid",
+				"Butler",
+				"Guard"
+			]
+		},
+		"11": {
+			"name": "Palace",
+			"cost": 65000000,
+			"happy": 1000,
+			"upkeep": 3000,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Open Bar",
+				"Small Pool",
+				"Medium Pool",
+				"Large Pool",
+				"Small Vault",
+				"Medium Vault",
+				"Large Vault",
+				"Extra Large Vault"
+			],
+			"staff_available": [
+				"Maid",
+				"Butler",
+				"Guard"
+			]
+		},
+		"12": {
+			"name": "Castle",
+			"cost": 200000000,
+			"happy": 1500,
+			"upkeep": 10000,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Open Bar",
+				"Small Pool",
+				"Medium Pool",
+				"Large Pool",
+				"Small Vault",
+				"Medium Vault",
+				"Large Vault",
+				"Extra Large Vault",
+				"Medical Facility",
+				"Advanced Shooting Range"
+			],
+			"staff_available": [
+				"Maid",
+				"Butler",
+				"Guard",
+				"Doctor"
+			]
+		},
+		"13": {
+			"name": "Private Island",
+			"cost": 500000000,
+			"happy": 2000,
+			"upkeep": 100000,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Open Bar",
+				"Small Pool",
+				"Medium Pool",
+				"Large Pool",
+				"Small Vault",
+				"Medium Vault",
+				"Large Vault",
+				"Extra Large Vault",
+				"Medical Facility",
+				"Advanced Shooting Range",
+				"Airstrip",
+				"Private Yacht"
+			],
+			"staff_available": [
+				"Maid",
+				"Butler",
+				"Guard",
+				"Doctor",
+				"Pilot"
+			]
+		},
+		"14": {
+			"name": "Eagle Island",
+			"cost": "",
+			"happy": 3500,
+			"upkeep": 250000,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Open Bar",
+				"Small Pool",
+				"Medium Pool",
+				"Large Pool",
+				"Small Vault",
+				"Medium Vault",
+				"Large Vault",
+				"Extra Large Vault",
+				"Medical Facility",
+				"Advanced Shooting Range",
+				"Airstrip",
+				"Private Yacht"
+			],
+			"staff_available": [
+				"Maid",
+				"Butler",
+				"Guard",
+				"Doctor",
+				"Pilot"
+			]
+		},
+		"15": {
+			"name": "Silo X17",
+			"cost": "",
+			"happy": 3000,
+			"upkeep": 250000,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Open Bar",
+				"Small Pool",
+				"Medium Pool",
+				"Large Pool",
+				"Small Vault",
+				"Medium Vault",
+				"Large Vault",
+				"Extra Large Vault",
+				"Medical Facility",
+				"Advanced Shooting Range",
+				"Airstrip"
+			],
+			"staff_available": [
+				"Maid",
+				"Butler",
+				"Guard",
+				"Doctor",
+				"Pilot"
+			]
+		},
+		"16": {
+			"name": "Drakkar Sea Fort",
+			"cost": "",
+			"happy": 4000,
+			"upkeep": 250000,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Open Bar",
+				"Small Pool",
+				"Medium Pool",
+				"Large Pool",
+				"Small Vault",
+				"Medium Vault",
+				"Large Vault",
+				"Extra Large Vault",
+				"Medical Facility",
+				"Advanced Shooting Range",
+				"Private Yacht"
+			],
+			"staff_available": [
+				"Maid",
+				"Butler",
+				"Guard",
+				"Doctor"
+			]
+		},
+		"17": {
+			"name": "Queen Eleanor",
+			"cost": "",
+			"happy": 4500,
+			"upkeep": 250000,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Open Bar",
+				"Small Pool",
+				"Medium Pool",
+				"Large Pool",
+				"Small Vault",
+				"Medium Vault",
+				"Large Vault",
+				"Extra Large Vault",
+				"Medical Facility",
+				"Advanced Shooting Range"
+			],
+			"staff_available": [
+				"Maid",
+				"Butler",
+				"Guard",
+				"Doctor"
+			]
+		},
+		"18": {
+			"name": "Cerium Temple",
+			"cost": "",
+			"happy": 4000,
+			"upkeep": 250000,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Open Bar",
+				"Small Pool",
+				"Medium Pool",
+				"Large Pool",
+				"Small Vault",
+				"Medium Vault",
+				"Large Vault",
+				"Extra Large Vault",
+				"Medical Facility",
+				"Advanced Shooting Range"
+			],
+			"staff_available": [
+				"Maid",
+				"Butler",
+				"Guard",
+				"Doctor"
+			]
+		},
+		"19": {
+			"name": "Trekant Tower",
+			"cost": "",
+			"happy": 4000,
+			"upkeep": 250000,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Open Bar",
+				"Small Pool",
+				"Medium Pool",
+				"Large Pool",
+				"Small Vault",
+				"Medium Vault",
+				"Large Vault",
+				"Extra Large Vault",
+				"Medical Facility",
+				"Advanced Shooting Range"
+			],
+			"staff_available": [
+				"Maid",
+				"Butler",
+				"Guard",
+				"Doctor"
+			]
+		},
+		"20": {
+			"name": "Iron Fist Hill",
+			"cost": "",
+			"happy": 3750,
+			"upkeep": 250000,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Open Bar",
+				"Small Pool",
+				"Medium Pool",
+				"Large Pool",
+				"Small Vault",
+				"Medium Vault",
+				"Large Vault",
+				"Extra Large Vault",
+				"Medical Facility",
+				"Advanced Shooting Range",
+				"Airstrip"
+			],
+			"staff_available": [
+				"Maid",
+				"Butler",
+				"Guard",
+				"Doctor",
+				"Pilot"
+			]
+		},
+		"21": {
+			"name": "USS Bloodbath",
+			"cost": "",
+			"happy": 3500,
+			"upkeep": 250000,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Open Bar",
+				"Small Vault",
+				"Medium Vault",
+				"Large Vault",
+				"Extra Large Vault",
+				"Medical Facility",
+				"Advanced Shooting Range"
+			],
+			"staff_available": [
+				"Maid",
+				"Butler",
+				"Guard",
+				"Doctor"
+			]
+		},
+		"22": {
+			"name": "Royal Penthouse",
+			"cost": "",
+			"happy": 4000,
+			"upkeep": 250000,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Open Bar",
+				"Small Pool",
+				"Medium Pool",
+				"Large Pool",
+				"Small Vault",
+				"Medium Vault",
+				"Large Vault",
+				"Extra Large Vault",
+				"Medical Facility",
+				"Advanced Shooting Range"
+			],
+			"staff_available": [
+				"Maid",
+				"Butler",
+				"Guard",
+				"Doctor"
+			]
+		},
+		"23": {
+			"name": "Presidential Bunker",
+			"cost": "",
+			"happy": 3500,
+			"upkeep": 250000,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Open Bar",
+				"Small Pool",
+				"Medium Pool",
+				"Large Pool",
+				"Small Vault",
+				"Medium Vault",
+				"Large Vault",
+				"Extra Large Vault",
+				"Medical Facility",
+				"Advanced Shooting Range",
+				"Airstrip"
+			],
+			"staff_available": [
+				"Maid",
+				"Butler",
+				"Guard",
+				"Doctor",
+				"Pilot"
+			]
+		},
+		"24": {
+			"name": "Maidengrave",
+			"cost": "",
+			"happy": 3500,
+			"upkeep": 250000,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Open Bar",
+				"Small Pool",
+				"Medium Pool",
+				"Large Pool",
+				"Small Vault",
+				"Medium Vault",
+				"Large Vault",
+				"Extra Large Vault",
+				"Medical Facility",
+				"Advanced Shooting Range",
+				"Airstrip"
+			],
+			"staff_available": [
+				"Maid",
+				"Butler",
+				"Guard",
+				"Doctor",
+				"Pilot"
+			]
+		},
+		"25": {
+			"name": "St. Pauls Abbey",
+			"cost": "",
+			"happy": 4000,
+			"upkeep": 250000,
+			"upgrades_available": [
+				"Sufficient Interior Modification",
+				"Superior Interior Modification",
+				"Hot Tub",
+				"Sauna",
+				"Open Bar",
+				"Small Pool",
+				"Medium Pool",
+				"Large Pool",
+				"Small Vault",
+				"Medium Vault",
+				"Large Vault",
+				"Extra Large Vault",
+				"Medical Facility",
+				"Advanced Shooting Range"
+			],
+			"staff_available": [
+				"Maid",
+				"Butler",
+				"Guard",
+				"Doctor"
+			]
+		}
+	}
+}

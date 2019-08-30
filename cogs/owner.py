@@ -10,6 +10,44 @@ class OwnerCog(commands.Cog):
         self.boottime = datetime.now()
         self.version = 'v1.0.0'
 
+    @is_mod()
+    @commands.command()
+    async def fixid(self, ctx, member: discord.User = None, torn_id: str = None):
+        if not torn_id:
+            e = discord.Embed(colour=discord.Colour(0xbf2003),
+                              description=f"<:no:609076414469373971> {ctx.author.name} please provide a torn id!")
+            await ctx.send(embed=e)
+            return
+
+        if not torn_id.isdigit():
+            e = discord.Embed(colour=discord.Colour(0xbf2003),
+                            description=f"<:no:609076414469373971> {ctx.author.name} that doesnt look like a torn id!")
+            await ctx.send(embed=e)
+            return
+
+        if torn_id and torn_id.isdigit():
+            get_user = await self.bot.fetch.one(f'SELECT * FROM Users WHERE DiscordID=?', (member.id, ))
+            if get_user:
+                get_json = await self.bot.torn.api.get_profile(torn_id)
+                if get_json:
+                    await self.bot.db.execute(f"UPDATE Users SET TornID=? WHERE DiscordID=?",
+                                              (torn_id, member.id))
+                    await self.bot.db.commit()
+                    e = discord.Embed(colour=discord.Colour(0x03bd33),
+                                      description=f"<:tickYes:611582439126728716> {ctx.author.name}, {member.name}'s id has been updated to {torn_id}")
+                    await ctx.send(embed=e)
+                    return
+
+            if not get_user:
+                e = discord.Embed(colour=discord.Colour(0xbf2003),
+                                  description=f"<:no:609076414469373971> {ctx.author.name}, couldnt find an id for {member.name}")
+                await ctx.send(embed=e)
+                return
+
+    @fixid.error
+    async def member_not_found_error(self, ctx, exception):
+        pass
+
     @commands.command()
     @is_mod()
     async def enable(self, ctx, cog_name: str = None):

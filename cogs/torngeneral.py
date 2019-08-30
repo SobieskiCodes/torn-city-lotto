@@ -8,40 +8,35 @@ class general(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    async def profile(self, ctx, userID: str = None):
+    async def profile(self, ctx, user: discord.User = None):
         """Display your or someone elses profile, $profile <@name>
-        :param userID:
+        :param user: discord user, id, name, mention
         """
-        if userID and ctx.message.mentions:
-            if len(ctx.message.mentions) == 1:
-                get_user = await self.bot.fetch.one(f'SELECT TornID FROM Users WHERE DiscordID=?', (ctx.message.mentions[0].id, ))
-                if get_user:
-                    get_json = await self.bot.torn.api.get_profile(get_user[0])
-                    get_faction = await self.bot.torn.url.get_faction(get_json['faction']['faction_id'])
-                    faction = f"[{get_json['faction']['faction_name']}]({get_faction})" if get_json['faction']['faction_name'] != "None" else "N/A"
-                    profile = await self.bot.torn.url.get_profiles(get_json['player_id'])
-                    e = discord.Embed(
-                        title=f"{get_json['name']} [{get_json['player_id']}]",
-                        description=f"Rank: {get_json['rank']}\n"
+        if user:
+            get_user = await self.bot.fetch.one(f'SELECT TornID FROM Users WHERE DiscordID=?', (user.id, ))
+            if get_user:
+                get_json = await self.bot.torn.api.get_profile(get_user[0])
+                get_faction = await self.bot.torn.url.get_faction(get_json['faction']['faction_id'])
+                faction = f"[{get_json['faction']['faction_name']}]({get_faction})" if get_json['faction']['faction_name'] != "None" else "N/A"
+                profile = await self.bot.torn.url.get_profiles(get_json['player_id'])
+                e = discord.Embed(
+                    title=f"{get_json['name']} [{get_json['player_id']}]",
+                    description=f"Rank: {get_json['rank']}\n"
                                     f"Level: {get_json['level']}\n"
                                     f"Status: {get_json['status'][0]}\n"
                                     f"Faction: {faction}\n"
                                     f"Last Action: {get_json['last_action']['relative']}\n\n"
                                     f"[profile]({profile})",
-                        colour=discord.Colour(0x278d89)
+                    colour=discord.Colour(0x278d89)
                         )
-                    e.set_thumbnail(url=f"https://sobieski.codes/torn/profile/{random.choice([1,2,4])}.png")
-                    await ctx.send(embed=e)
-                else:
-                    e = discord.Embed(colour=discord.Colour(0xbf2003),
-                        description=f"<:no:609076414469373971> {ctx.author.name} sorry couldnt find that user.")
-                    await ctx.send(embed=e)
-                    return
+                e.set_thumbnail(url=f"https://sobieski.codes/torn/profile/{random.choice([1,2,4])}.png")
+                await ctx.send(embed=e)
             else:
                 e = discord.Embed(colour=discord.Colour(0xbf2003),
-                        description=f"<:no:609076414469373971> {ctx.author.name} please provide only a single user!")
+                        description=f"<:no:609076414469373971> {ctx.author.name} sorry couldnt find that user.")
                 await ctx.send(embed=e)
                 return
+
         else:
             get_user = await self.bot.fetch.one(f'SELECT TornID FROM Users WHERE DiscordID=?', (ctx.author.id, ))
             if get_user:
@@ -64,19 +59,29 @@ class general(commands.Cog):
                 await ctx.send(embed=e)
             else:
                 e = discord.Embed(colour=discord.Colour(0xbf2003),
-                            description=f"<:no:609076414469373971> {ctx.author.name} seems i dont have an id for you!")
+                            description=f"<:no:609076414469373971> {ctx.author.name} seems i dont have an id for you! you can add it with addid ex: $addid 1517715")
                 await ctx.send(embed=e)
 
+    @profile.error
+    async def member_not_found_error(self, ctx, exception):
+        if not str(exception).startswith('Torn says'):
+            await ctx.send('Member not found! Try mentioning them instead.')
 
     @commands.command()
-    async def addid(self, ctx, torn_id):
+    async def addid(self, ctx, torn_id: str = None):
         """Add your torn id, $addid 1517715
         :param torn_id: Your in game torn ID
         """
+        if not torn_id:
+            e = discord.Embed(colour=discord.Colour(0xbf2003),
+                            description=f"<:no:609076414469373971> {ctx.author.name} please include your id ex: $addid 1517715")
+            await ctx.send(embed=e)
+            return
         if not torn_id.isdigit():
             e = discord.Embed(colour=discord.Colour(0xbf2003),
                             description=f"<:no:609076414469373971> {ctx.author.name} that doesnt look like a torn id!")
             await ctx.send(embed=e)
+            return
         else:
             get_json = await self.bot.torn.api.get_profile(torn_id)
             if get_json:

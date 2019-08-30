@@ -5,7 +5,7 @@ import aiosqlite
 import aiohttp
 import jthon
 from cogs.util.errorhandling import NotAuthorized, SlyBastard, NotAdded, TempBan, TornAPIUnavailable, TornAPIError
-
+import discord
 
 async def get_prefix(bot, message):
     if message.guild:
@@ -50,6 +50,9 @@ async def on_command_error(ctx, error):
     if isinstance(error, commands.errors.CheckFailure) or isinstance(error, commands.errors.CommandNotFound):
         return
     if isinstance(error, commands.errors.BadArgument):
+        e = discord.Embed(colour=discord.Colour(0xbf2003),
+                          description=f"<:no:609076414469373971> {ctx.author.name}, {error}")
+        await ctx.send(embed=e)
         return
     if isinstance(error, NotAuthorized):
         #pretty-fi this

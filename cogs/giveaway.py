@@ -87,6 +87,16 @@ class timedGiveaway(commands.Cog):
             )
             e.set_footer(text="Ended")
             await the_giveaway.edit(embed=new_e)
+            another_e = discord.Embed(
+                description=f"<:party:577578847080546304>{ctx.message.author.name}'s giveaway has ended! \n"
+                                            f"Winner: {', '.join(win.mention for win in winner)}\n"
+                                            f"The prize: {prize} \n"
+                                            f"[link]({the_giveaway.jump_url})",
+                timestamp=datetime.utcnow(),
+                colour=discord.Colour(0x278d89)
+            )
+            await the_giveaway.channel.send(embed=another_e)
+
         if len(users) <= 2:
             new_e = discord.Embed(
                 title=f"<:party:577578847080546304>{ctx.message.author.name}'s giveaway has ended!<:party:577578847080546304>",

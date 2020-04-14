@@ -47,22 +47,28 @@ class timedGiveaway(commands.Cog):
             await test.delete()
             return
 
-        get_the_emoji = self.bot.get_emoji(577578847080546304)
+        get_the_emoji = self.bot.get_emoji(679861713293934635)
         if reaction.emoji != get_the_emoji:
             await reaction.message.remove_reaction(reaction.emoji, user)
 
+    async def get_user_profile_link(self, user):
+        get_user = await self.bot.fetch.one(f'SELECT TornID FROM Users WHERE DiscordID=?', (user.id,))
+        profile = await self.bot.torn.url.get_profiles(get_user[0])
+        return profile
+
+
     async def giveaway(self, ctx, length, winners, prize):
         e = discord.Embed(
-            title=f"<:party:577578847080546304>{ctx.message.author.name} just started a giveaway!<:party:577578847080546304>",
+            title=f"<:party:679861713293934635>{ctx.message.author.name} just started a giveaway!<:party:679861713293934635>",
             description=f"The prize: {prize} \nGiveaway ends in {length // 60}m\nNumber of winners: {winners}\n"
-                        f"React with <:party:577578847080546304> to enter!",
+                        f"React with <:party:679861713293934635> to enter!",
             timestamp=datetime.utcnow(),
             colour=discord.Colour(0x278d89)
         )
         e.set_thumbnail(url=f"{ctx.message.author.avatar_url}")
         e.set_footer(text="Started")
         the_giveaway = await ctx.send(embed=e)
-        get_the_emoji = self.bot.get_emoji(577578847080546304)
+        get_the_emoji = self.bot.get_emoji(679861713293934635)
         await the_giveaway.add_reaction(get_the_emoji)
         self.bot.giveawayslist.append(the_giveaway.id)
         await asyncio.sleep(length)
@@ -73,14 +79,18 @@ class timedGiveaway(commands.Cog):
             users = await reaction.users().flatten()
         while True:
             winner = random.sample(users, winners)
-            if self.bot.user not in winner and ctx.author not in winner:
-                break
             if len(users) <= 2:
+                break
+            if self.bot.user not in winner and ctx.author not in winner:
                 break
 
         if len(users) > 2:
+            profile_links = []
+            for person in winner:
+                link = await timedGiveaway.get_user_profile_link(self, person)
+                profile_links.append(f"[{person.display_name}]({link})")
             new_e = discord.Embed(
-                title=f"<:party:577578847080546304>{ctx.message.author.name}'s giveaway has ended!<:party:577578847080546304>",
+                title=f"<:party:679861713293934635>{ctx.message.author.name}'s giveaway has ended!<:party:679861713293934635>",
                 description=f"The prize: {prize} \nWinner: {', '.join(win.mention for win in winner)}\nNumber of entries: {len(users)}\n",
                 timestamp=datetime.utcnow(),
                 colour=discord.Colour(0x278d89)
@@ -88,10 +98,10 @@ class timedGiveaway(commands.Cog):
             e.set_footer(text="Ended")
             await the_giveaway.edit(embed=new_e)
             another_e = discord.Embed(
-                description=f"<:party:577578847080546304>{ctx.message.author.name}'s giveaway has ended! \n"
+                description=f"<:party:679861713293934635>{ctx.message.author.name}'s giveaway has ended! \n"
                                             f"Winner: {', '.join(win.mention for win in winner)}\n"
                                             f"The prize: {prize} \n"
-                                            f"[link]({the_giveaway.jump_url})",
+                                            f"[link]({the_giveaway.jump_url}) | {' | '.join(profile_links)}",
                 timestamp=datetime.utcnow(),
                 colour=discord.Colour(0x278d89)
             )
@@ -99,7 +109,7 @@ class timedGiveaway(commands.Cog):
 
         if len(users) <= 2:
             new_e = discord.Embed(
-                title=f"<:party:577578847080546304>{ctx.message.author.name}'s giveaway has ended!<:party:577578847080546304>",
+                title=f"<:party:679861713293934635>{ctx.message.author.name}'s giveaway has ended!<:party:679861713293934635>",
                 description=f"The prize: {prize} \nWinner: no one won because not enough people joined :(\n"
                             f"Number of entries: {len(users)}\n",
                 timestamp=datetime.utcnow(),
